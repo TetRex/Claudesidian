@@ -67,6 +67,17 @@ export class ClaudeChatView extends ItemView {
 			new Notice(`Switched to ${label}`);
 		});
 
+		// Settings button
+		const settingsBtn = headerActions.createEl("button", {
+			cls: "claude-icon-btn",
+			attr: { title: "Claude Assistant settings" },
+		});
+		setIcon(settingsBtn, "settings");
+		settingsBtn.addEventListener("click", () => {
+			(this.app as any).setting.open();
+			(this.app as any).setting.openTabById("obsidian-claude-assistant");
+		});
+
 		// Clear button
 		const clearBtn = headerActions.createEl("button", {
 			cls: "claude-icon-btn",
