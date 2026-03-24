@@ -75,7 +75,7 @@ export default class ClaudeAssistantPlugin extends Plugin {
 		});
 	}
 
-	async onunload() {
+	onunload() {
 		this.client = null;
 	}
 

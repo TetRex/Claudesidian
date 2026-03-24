@@ -1,9 +1,17 @@
-import { ItemView, Notice, Platform, WorkspaceLeaf, MarkdownRenderer, setIcon } from "obsidian";
+import { App, ItemView, Notice, Platform, WorkspaceLeaf, MarkdownRenderer, setIcon } from "obsidian";
 import type { MessageParam } from "@anthropic-ai/sdk/resources/messages";
 import type ClaudeAssistantPlugin from "./main";
 import { VAULT_TOOLS, createToolExecutor } from "./vault-tools";
 
 export const CHAT_VIEW_TYPE = "claude-chat-view";
+
+// Obsidian exposes a `setting` object on App that is not in its public type definitions.
+interface AppWithSetting extends App {
+	setting: {
+		open(): void;
+		openTabById(id: string): void;
+	};
+}
 
 const MODELS = [
 	{ value: "claude-sonnet-4-6", label: "Sonnet 4.6" },
@@ -44,7 +52,7 @@ export class ClaudeChatView extends ItemView {
 	getDisplayText(): string { return "Claude chat"; }
 	getIcon(): string { return "message-square"; }
 
-	async onOpen() {
+	onOpen() {
 		const container = this.containerEl.children[1] as HTMLElement;
 		container.empty();
 		container.addClass("claude-chat-container");
@@ -62,13 +70,13 @@ export class ClaudeChatView extends ItemView {
 			const opt = this.modelSelect.createEl("option", { text: m.label, value: m.value });
 			if (m.value === this.plugin.settings.model) opt.selected = true;
 		}
-		this.modelSelect.addEventListener("change", async () => {
+		this.modelSelect.addEventListener("change", () => void (async () => {
 			if (!this.modelSelect) return;
 			this.plugin.settings.model = this.modelSelect.value;
 			await this.plugin.saveSettings();
 			const label = MODELS.find(m => m.value === this.modelSelect!.value)?.label;
 			new Notice(`Switched to ${label}`);
-		});
+		})());
 
 		// Settings button
 		const settingsBtn = headerActions.createEl("button", {
@@ -77,8 +85,8 @@ export class ClaudeChatView extends ItemView {
 		});
 		setIcon(settingsBtn, "settings");
 		settingsBtn.addEventListener("click", () => {
-			(this.app as any).setting.open();
-			(this.app as any).setting.openTabById("claudesidian");
+			(this.app as AppWithSetting).setting.open();
+			(this.app as AppWithSetting).setting.openTabById("claudesidian");
 		});
 
 		// Clear button
@@ -147,7 +155,7 @@ export class ClaudeChatView extends ItemView {
 			// On mobile, Enter adds a newline — use the send button instead
 			if (!Platform.isMobile && e.key === "Enter" && !e.shiftKey) {
 				e.preventDefault();
-				this.sendMessage();
+				void this.sendMessage();
 				return;
 			}
 
@@ -195,10 +203,10 @@ export class ClaudeChatView extends ItemView {
 			attr: { title: "Send" },
 		});
 		setIcon(this.sendBtn, "send");
-		this.sendBtn.addEventListener("click", () => this.sendMessage());
+		this.sendBtn.addEventListener("click", () => void this.sendMessage());
 	}
 
-	async onClose() {}
+	onClose() {}
 
 	private autoResizeTextarea() {
 		if (!this.inputEl) return;

@@ -111,12 +111,12 @@ export function createToolExecutor(app: App): (name: string, input: Record<strin
 				return readNote(app, input.path as string);
 			case "create_note": {
 				const result = await createNote(app, input.path as string, input.content as string);
-				new Notice(`Claude created: ${input.path}`);
+				new Notice(`Claude created: ${input.path as string}`);
 				return result;
 			}
 			case "update_note": {
 				const result = await updateNote(app, input.path as string, input.content as string);
-				new Notice(`Claude updated: ${input.path}`);
+				new Notice(`Claude updated: ${input.path as string}`);
 				return result;
 			}
 			case "search_notes":

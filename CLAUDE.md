@@ -38,8 +38,34 @@ No test framework is configured. There is no lint script.
 
 Model pricing is hardcoded in `main.ts`. Usage resets on the first of each month. The monthly limit (if set) is enforced before sending each message. `data.json` (Obsidian's persisted settings) stores `usageMonth`, `usageDollars`, and the API key — it is gitignored.
 
+`saveSettings()` nulls `this.client` to force re-instantiation on the next request (picks up new API key / model). `saveData_()` is a separate private helper that persists data *without* nulling the client — used by `recordUsage()` so a usage update mid-conversation doesn't reset the client.
+
+### Dual message arrays in ClaudeChatView
+
+`ClaudeChatView` maintains two parallel arrays:
+- `displayMessages` — what the user sees (plain user text, rendered assistant Markdown). Never contains attached-note content.
+- `apiMessages` — the actual `MessageParam[]` sent to the API. User messages may contain the full attached-note text prepended. Trimmed to the last 20 messages before each send to cap input tokens.
+
+`streamMessage()` returns only the messages *added* in that call (assistant + tool-result turns). The caller appends these to `apiMessages`.
+
+### Prompt caching
+
+`claude-client.ts` marks the system prompt block and the last tool definition with `cache_control: { type: "ephemeral" }`. This enables Anthropic prompt caching to reduce costs on repeated requests in the same conversation.
+
+### VaultInstructions cache
+
+`VaultInstructions` keeps an in-memory `Map<path, { content, mtime }>`. On each request it compares the file's `stat.mtime` against the cached value and re-reads only when the file has changed. No invalidation is needed on vault writes.
+
 ### Build
 
 - Entry: `src/main.ts` → Output: `main.js` (CommonJS, ES2018 target)
 - External: `obsidian`, `electron`, CodeMirror packages, Node builtins
 - Dev: inline sourcemaps; Production: minified, no sourcemaps
+
+## Obsidian plugin conventions
+
+These apply everywhere in this codebase:
+
+- **No inline styles.** Never use `element.style.*`. Use CSS classes defined in `styles.css`, or `element.setCssProps({ "--var-name": value })` for values that must be set dynamically. CSS custom properties consumed by the stylesheet (e.g. `--claude-textarea-height`, `--claude-usage-pct`) bridge the two.
+- **UI text uses sentence case.** Only the first word and proper nouns are capitalised (`"Monthly spending limit"`, `"API key"`, `"Test connection"`). This applies to `setName()`, `setDesc()`, button labels, placeholders, and `Notice` strings.
+- **Don't mark lifecycle methods `async` without `await`.** `Plugin.onunload()` returns `void`; `ItemView.onClose()` returns `void`; `ItemView.onOpen()` accepts `Promise<void> | void`. Adding `async` without `await` is unnecessary and misleading.
