@@ -1,4 +1,5 @@
-import { App, ItemView, Notice, Platform, WorkspaceLeaf, MarkdownRenderer, setIcon } from "obsidian";
+import type { App, WorkspaceLeaf} from "obsidian";
+import { ItemView, Notice, Platform, MarkdownRenderer, setIcon } from "obsidian";
 import type { MessageParam } from "@anthropic-ai/sdk/resources/messages";
 import type ClaudeAssistantPlugin from "./main";
 import { VAULT_TOOLS, createToolExecutor } from "./vault-tools";
@@ -72,9 +73,10 @@ export class ClaudeChatView extends ItemView {
 		}
 		this.modelSelect.addEventListener("change", () => void (async () => {
 			if (!this.modelSelect) return;
-			this.plugin.settings.model = this.modelSelect.value;
+			const modelValue = this.modelSelect.value;
+			this.plugin.settings.model = modelValue;
 			await this.plugin.saveSettings();
-			const label = MODELS.find(m => m.value === this.modelSelect!.value)?.label;
+			const label = MODELS.find(m => m.value === modelValue)?.label;
 			new Notice(`Switched to ${label}`);
 		})());
 
@@ -86,7 +88,7 @@ export class ClaudeChatView extends ItemView {
 		setIcon(settingsBtn, "settings");
 		settingsBtn.addEventListener("click", () => {
 			(this.app as AppWithSetting).setting.open();
-			(this.app as AppWithSetting).setting.openTabById("claudesidian");
+			(this.app as AppWithSetting).setting.openTabById("claude-assistant");
 		});
 
 		// Clear button
@@ -290,7 +292,7 @@ export class ClaudeChatView extends ItemView {
 					},
 					onUsage: (inputTokens: number, outputTokens: number) => {
 						assistantMsg.outputTokens = outputTokens;
-						this.plugin.recordUsage(inputTokens, outputTokens);
+						void this.plugin.recordUsage(inputTokens, outputTokens);
 					},
 				},
 				VAULT_TOOLS,
@@ -334,7 +336,7 @@ export class ClaudeChatView extends ItemView {
 			const bubble = row.createDiv({ cls: "claude-msg-bubble" });
 
 			if (msg.role === "assistant") {
-				MarkdownRenderer.render(this.app, msg.content || "…", bubble, "", this);
+				void MarkdownRenderer.render(this.app, msg.content || "…", bubble, "", this);
 				if (msg.outputTokens !== undefined) {
 					bubble.createDiv({
 						cls: "claude-msg-tokens",

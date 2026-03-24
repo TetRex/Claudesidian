@@ -1,4 +1,5 @@
-import { App, Notice, PluginSettingTab, Setting } from "obsidian";
+import type { App} from "obsidian";
+import { Notice, PluginSettingTab, Setting } from "obsidian";
 import type ClaudeAssistantPlugin from "./main";
 
 export interface ClaudeAssistantSettings {
@@ -33,14 +34,16 @@ export class ClaudeSettingTab extends PluginSettingTab {
 	}
 
 	display(): void {
-		const { containerEl } = this;
-		containerEl.empty();
-		void this.renderAsync(containerEl);
+		void this.renderAsync();
 	}
 
-	private async renderAsync(containerEl: HTMLElement): Promise<void> {
+	private async renderAsync(): Promise<void> {
 		// ── Instructions file ──────────────────────────────────
 		const instructionExists = await this.app.vault.adapter.exists(".claude.md");
+
+		// Clear after the async work so concurrent calls don't produce duplicate settings
+		const { containerEl } = this;
+		containerEl.empty();
 
 		new Setting(containerEl)
 			.setName("Vault instructions (.claude.md)")

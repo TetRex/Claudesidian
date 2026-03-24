@@ -1,4 +1,5 @@
-import { App, Notice, TFile, TFolder } from "obsidian";
+import type { App} from "obsidian";
+import { Notice, TFile, TFolder } from "obsidian";
 import type { ToolDefinition } from "./claude-client";
 
 export const VAULT_TOOLS: ToolDefinition[] = [
@@ -205,7 +206,7 @@ async function searchNotes(app: App, query: string, maxResults: number): Promise
 	return results.length > 0 ? results.join("\n") : "No matches found.";
 }
 
-function getVaultStructure(app: App, maxDepth: number): string {
+export function getVaultStructure(app: App, maxDepth: number): string {
 	const lines: string[] = [];
 
 	function walk(folder: TFolder, depth: number, prefix: string) {

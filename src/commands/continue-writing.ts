@@ -1,4 +1,5 @@
-import { Editor, Notice } from "obsidian";
+import type { Editor} from "obsidian";
+import { Notice } from "obsidian";
 import type ClaudeAssistantPlugin from "../main";
 import { PreviewModal } from "../preview-modal";
 

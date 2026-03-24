@@ -5,8 +5,9 @@ const MODEL_COSTS: Record<string, { input: number; output: number }> = {
 	"claude-sonnet-4-6": { input: 3.0 / 1_000_000, output: 15.0 / 1_000_000 },
 	"claude-haiku-4-5":  { input: 1.0 / 1_000_000, output: 5.0 / 1_000_000 },
 };
+import type {
+	ClaudeAssistantSettings} from "./settings";
 import {
-	ClaudeAssistantSettings,
 	ClaudeSettingTab,
 	DEFAULT_SETTINGS,
 } from "./settings";
@@ -21,6 +22,7 @@ export default class ClaudeAssistantPlugin extends Plugin {
 	settings: ClaudeAssistantSettings = DEFAULT_SETTINGS;
 	private client: ClaudeClient | null = null;
 	vaultInstructions: VaultInstructions | null = null;
+	private structureUpdateTimer: number | null = null;
 
 	async onload() {
 		await this.loadSettings();
@@ -33,7 +35,7 @@ export default class ClaudeAssistantPlugin extends Plugin {
 
 		// Ribbon icon to open chat
 		this.addRibbonIcon("message-square", "Open Claude chat", () => {
-			this.activateChatView();
+			void this.activateChatView();
 		});
 
 		// Command: open chat
@@ -63,6 +65,18 @@ export default class ClaudeAssistantPlugin extends Plugin {
 			name: "Improve/rewrite selection",
 			editorCallback: (editor) => improveRewrite(this, editor),
 		});
+
+		// Auto-update .structure.md on vault changes
+		const scheduleStructureUpdate = () => {
+			if (this.structureUpdateTimer !== null) window.clearTimeout(this.structureUpdateTimer);
+			this.structureUpdateTimer = window.setTimeout(() => {
+				this.structureUpdateTimer = null;
+				void this.vaultInstructions?.updateStructureFile();
+			}, 500);
+		};
+		this.registerEvent(this.app.vault.on("create", (f) => { if (!f.path.startsWith(".")) scheduleStructureUpdate(); }));
+		this.registerEvent(this.app.vault.on("delete", (f) => { if (!f.path.startsWith(".")) scheduleStructureUpdate(); }));
+		this.registerEvent(this.app.vault.on("rename", (f) => { if (!f.path.startsWith(".")) scheduleStructureUpdate(); }));
 
 		// Offer to create .claude.md if none exists
 		this.app.workspace.onLayoutReady(() => {
@@ -187,13 +201,13 @@ export default class ClaudeAssistantPlugin extends Plugin {
 	private async activateChatView() {
 		const existing = this.app.workspace.getLeavesOfType(CHAT_VIEW_TYPE);
 		if (existing.length > 0) {
-			this.app.workspace.revealLeaf(existing[0]);
+			await this.app.workspace.revealLeaf(existing[0]);
 			return;
 		}
 		const leaf = this.app.workspace.getRightLeaf(false);
 		if (leaf) {
 			await leaf.setViewState({ type: CHAT_VIEW_TYPE, active: true });
-			this.app.workspace.revealLeaf(leaf);
+			await this.app.workspace.revealLeaf(leaf);
 		}
 	}
 }

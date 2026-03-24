@@ -1,4 +1,5 @@
-import { App } from "obsidian";
+import type { App } from "obsidian";
+import { getVaultStructure } from "./vault-tools";
 
 const INSTRUCTION_FILE = ".claude.md";
 
@@ -84,11 +85,11 @@ Edit this file to customise how Claude behaves in your vault.
 - Prefer editing existing notes over creating new ones unless asked
 
 ## Vault structure map
-- A note named "_structure.md" at the vault root is the canonical structure map — it lists every folder and note in the vault as a nested Markdown list
-- If "_structure.md" does not exist, create it using get_vault_structure before doing any other work in a new session
-- After creating or modifying any note or folder, update "_structure.md" immediately to reflect the change
+- A note named ".structure.md" at the vault root is the canonical structure map — it lists every folder and note in the vault as a nested Markdown list
+- If ".structure.md" does not exist, create it using get_vault_structure before doing any other work in a new session
+- After creating or modifying any note or folder, update ".structure.md" immediately to reflect the change
 - Keep the map accurate: add new entries when files are created, remove entries when files are deleted, rename entries when files are moved
-- Before creating a new note, consult "_structure.md" to find the most relevant existing folder; only create a new folder if no suitable one exists
+- Before creating a new note, consult ".structure.md" to find the most relevant existing folder; only create a new folder if no suitable one exists
 
 ## Off-limits
 - Do not delete notes or folders unless explicitly instructed
@@ -96,7 +97,15 @@ Edit this file to customise how Claude behaves in your vault.
 `;
 
 		await this.app.vault.adapter.write(INSTRUCTION_FILE, template);
+
+		await this.updateStructureFile();
+
 		return true;
+	}
+
+	async updateStructureFile(): Promise<void> {
+		const structure = getVaultStructure(this.app, 100);
+		await this.app.vault.adapter.write(".structure.md", structure);
 	}
 
 	private getInstructionPaths(activeFilePath?: string): string[] {
