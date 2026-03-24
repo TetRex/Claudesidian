@@ -39,7 +39,7 @@ export async function continueWriting(
 					},
 				}
 			);
-		} catch (e) {
+		} catch (_e) {
 			modal.finishStreaming();
 		}
 

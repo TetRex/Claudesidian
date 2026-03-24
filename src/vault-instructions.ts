@@ -1,6 +1,6 @@
-import { App, TFile } from "obsidian";
+import { App } from "obsidian";
 
-const INSTRUCTION_FILE = "CLAUDE.md";
+const INSTRUCTION_FILE = ".claude.md";
 
 export class VaultInstructions {
 	private app: App;
@@ -11,7 +11,7 @@ export class VaultInstructions {
 	}
 
 	/**
-	 * Load and merge CLAUDE.md files from vault root through every parent
+	 * Load and merge .claude.md files from vault root through every parent
 	 * folder of the active file. Global instructions come first, local last.
 	 */
 	async getInstructions(activeFilePath?: string): Promise<string> {
@@ -29,10 +29,11 @@ export class VaultInstructions {
 	}
 
 	/**
-	 * Returns true if at least one CLAUDE.md exists in the vault.
+	 * Returns true if at least one .claude.md exists in the vault.
+	 * Uses the filesystem adapter directly so dotfiles are not missed.
 	 */
-	hasInstructions(): boolean {
-		return this.app.vault.getAbstractFileByPath(INSTRUCTION_FILE) instanceof TFile;
+	async hasInstructions(): Promise<boolean> {
+		return this.app.vault.adapter.exists(INSTRUCTION_FILE);
 	}
 
 	/**
@@ -40,7 +41,7 @@ export class VaultInstructions {
 	 * Returns false if the file already exists.
 	 */
 	async createStarterTemplate(): Promise<boolean> {
-		if (this.app.vault.getAbstractFileByPath(INSTRUCTION_FILE)) {
+		if (await this.app.vault.adapter.exists(INSTRUCTION_FILE)) {
 			return false;
 		}
 
@@ -82,19 +83,19 @@ Edit this file to customise how Claude behaves in your vault.
 - Always show a summary of changes before creating or modifying files
 - Prefer editing existing notes over creating new ones unless asked
 
-## Vault structure
-- Maintain an up-to-date mental map of the vault folder structure by observing it at the start of every session and whenever a new folder is created
-- When a new folder is created, immediately update your understanding of the vault structure so subsequent decisions reflect the latest layout
-- Before creating a new note, search the existing folder structure for a folder whose name or purpose matches the note's topic; if a matching folder is found, place the new note inside it
-- Only create a new folder for a note if no existing folder is relevant to the note's topic
-- When in doubt about folder placement, suggest the most relevant existing folder and ask for confirmation before creating a new one
+## Vault structure map
+- A note named "_structure.md" at the vault root is the canonical structure map — it lists every folder and note in the vault as a nested Markdown list
+- If "_structure.md" does not exist, create it using get_vault_structure before doing any other work in a new session
+- After creating or modifying any note or folder, update "_structure.md" immediately to reflect the change
+- Keep the map accurate: add new entries when files are created, remove entries when files are deleted, rename entries when files are moved
+- Before creating a new note, consult "_structure.md" to find the most relevant existing folder; only create a new folder if no suitable one exists
 
 ## Off-limits
 - Do not delete notes or folders unless explicitly instructed
 - Do not share or reference content from one note in another without permission
 `;
 
-		await this.app.vault.create(INSTRUCTION_FILE, template);
+		await this.app.vault.adapter.write(INSTRUCTION_FILE, template);
 		return true;
 	}
 
@@ -119,19 +120,22 @@ Edit this file to customise how Claude behaves in your vault.
 	}
 
 	private async readCachedInstruction(path: string): Promise<string | null> {
-		const file = this.app.vault.getAbstractFileByPath(path);
-		if (!file || !(file instanceof TFile)) {
+		const exists = await this.app.vault.adapter.exists(path);
+		if (!exists) {
 			this.cache.delete(path);
 			return null;
 		}
 
+		const stat = await this.app.vault.adapter.stat(path);
+		const mtime = stat?.mtime ?? 0;
+
 		const cached = this.cache.get(path);
-		if (cached && cached.mtime === file.stat.mtime) {
+		if (cached && cached.mtime === mtime) {
 			return cached.content;
 		}
 
-		const content = await this.app.vault.read(file);
-		this.cache.set(path, { content, mtime: file.stat.mtime });
+		const content = await this.app.vault.adapter.read(path);
+		this.cache.set(path, { content, mtime });
 		return content;
 	}
 }

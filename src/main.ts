@@ -64,14 +64,16 @@ export default class ClaudeAssistantPlugin extends Plugin {
 			editorCallback: (editor) => improveRewrite(this, editor),
 		});
 
-		// Offer to create CLAUDE.md if none exists
+		// Offer to create .claude.md if none exists
 		this.app.workspace.onLayoutReady(() => {
-			if (!this.vaultInstructions?.hasInstructions()) {
-				new Notice(
-					"Claude Assistant: No CLAUDE.md found. Create one in settings or manually at vault root.",
-					8000
-				);
-			}
+			void (async () => {
+				if (!await this.vaultInstructions?.hasInstructions()) {
+					new Notice(
+						"Claude Assistant: No .claude.md found. Create one in settings or manually at vault root.",
+						8000
+					);
+				}
+			})();
 		});
 	}
 
@@ -160,7 +162,7 @@ export default class ClaudeAssistantPlugin extends Plugin {
 			"You are Claude, an AI assistant integrated into Obsidian. You help the user with writing, organizing, and managing their notes. You have access to vault tools to read and modify files when asked.",
 		];
 
-		// Load CLAUDE.md instructions
+		// Load .claude.md instructions
 		if (this.vaultInstructions) {
 			const activeFile = this.app.workspace.getActiveFile();
 			const instructions = await this.vaultInstructions.getInstructions(

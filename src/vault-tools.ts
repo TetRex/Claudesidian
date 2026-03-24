@@ -129,7 +129,7 @@ export function createToolExecutor(app: App): (name: string, input: Record<strin
 	};
 }
 
-async function listFiles(app: App, folder: string): Promise<string> {
+function listFiles(app: App, folder: string): string {
 	const normalizedPath = folder === "/" ? "" : folder.replace(/^\//, "").replace(/\/$/, "");
 	const abstractFile = normalizedPath === "" ? app.vault.getRoot() : app.vault.getAbstractFileByPath(normalizedPath);
 

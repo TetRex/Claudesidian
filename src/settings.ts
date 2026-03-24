@@ -35,37 +35,34 @@ export class ClaudeSettingTab extends PluginSettingTab {
 	display(): void {
 		const { containerEl } = this;
 		containerEl.empty();
+		void this.renderAsync(containerEl);
+	}
 
+	private async renderAsync(containerEl: HTMLElement): Promise<void> {
 		// ── Instructions file ──────────────────────────────────
-		const instructionFile = (this.app as App & { vault: { getAbstractFileByPath: (p: string) => unknown } })
-			.vault.getAbstractFileByPath("CLAUDE.md");
+		const instructionExists = await this.app.vault.adapter.exists(".claude.md");
 
 		new Setting(containerEl)
-			.setName("Vault instructions (CLAUDE.md)")
+			.setName("Vault instructions (.claude.md)")
 			.setDesc(
-				instructionFile
+				instructionExists
 					? "Instructions file exists at vault root. Open it to edit your AI instructions."
-					: "No CLAUDE.md found. Create one with a starter template to customise how Claude behaves."
+					: "No .claude.md found. Create one with a starter template to customise how Claude behaves."
 			)
 			.addButton((btn) => {
-				if (instructionFile) {
-					btn.setButtonText("Open CLAUDE.md").onClick(() => {
-						const leaf = this.app.workspace.getLeaf(false);
-						const file = (this.app as App & { vault: { getAbstractFileByPath: (p: string) => unknown } })
-							.vault.getAbstractFileByPath("CLAUDE.md");
-						if (file) leaf.openFile(file as Parameters<typeof leaf.openFile>[0]);
+				if (instructionExists) {
+					btn.setButtonText("Delete .claude.md").onClick(async () => {
+						await this.app.vault.adapter.remove(".claude.md");
+						new Notice(".claude.md deleted.");
+						this.display();
 					});
 				} else {
-					btn.setButtonText("Create CLAUDE.md").setCta().onClick(async () => {
+					btn.setButtonText("Create .claude.md").setCta().onClick(async () => {
 						const created = await this.plugin.vaultInstructions?.createStarterTemplate();
 						if (created) {
-							new Notice("CLAUDE.md created at vault root.");
-							const leaf = this.app.workspace.getLeaf(false);
-							const file = (this.app as App & { vault: { getAbstractFileByPath: (p: string) => unknown } })
-								.vault.getAbstractFileByPath("CLAUDE.md");
-							if (file) leaf.openFile(file as Parameters<typeof leaf.openFile>[0]);
+							new Notice(".claude.md created at vault root.");
 						} else {
-							new Notice("CLAUDE.md already exists.");
+							new Notice(".claude.md already exists.");
 						}
 						this.display();
 					});

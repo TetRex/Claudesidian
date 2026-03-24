@@ -38,7 +38,7 @@ export async function summarizeNote(
 					},
 				}
 			);
-		} catch (e) {
+		} catch (_e) {
 			modal.finishStreaming();
 		}
 

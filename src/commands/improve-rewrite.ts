@@ -38,7 +38,7 @@ export async function improveRewrite(
 					},
 				}
 			);
-		} catch (e) {
+		} catch (_e) {
 			modal.finishStreaming();
 		}
 
