@@ -160,5 +160,3 @@ Usage recorded (tokens → dollars, persisted monthly)
 
 - The API key is stored via Obsidian's plugin data (`data.json`) and is never logged or exposed
 - Note content is only sent to Anthropic when you explicitly attach a note or Claude calls a vault tool
-- `data.json` is listed in `.gitignore` so it won't be committed to version control
-- The plugin is desktop-only (`isDesktopOnly: true`)
