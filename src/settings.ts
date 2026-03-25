@@ -76,10 +76,10 @@ export class ClaudeSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("API key")
-			.setDesc("Your Anthropic API key. Stored locally in plugin data.")
+			.setDesc("Your api key stored locally in plugin data.")
 			.addText((text) =>
 				text
-					.setPlaceholder("sk-ant-...")
+					.setPlaceholder("")
 					.setValue(this.plugin.settings.apiKey)
 					.then((t) => {
 						t.inputEl.type = "password";
