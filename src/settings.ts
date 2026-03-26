@@ -65,7 +65,7 @@ export class ClaudeSettingTab extends PluginSettingTab {
 						if (created) {
 							new Notice(".claude.md created at vault root.");
 						} else {
-							new Notice(".claude.md already exists.");
+						new Notice(".claude.md already exists.");
 						}
 						this.display();
 					});
