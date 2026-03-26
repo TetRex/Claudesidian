@@ -1,7 +1,7 @@
 import type { App, WorkspaceLeaf} from "obsidian";
 import { ItemView, Notice, Platform, MarkdownRenderer, setIcon } from "obsidian";
 import type { MessageParam } from "@anthropic-ai/sdk/resources/messages";
-import type ClaudeAssistantPlugin from "./main";
+import type VaultPensievePlugin from "./main";
 import { VAULT_TOOLS, createToolExecutor } from "./vault-tools";
 
 export const CHAT_VIEW_TYPE = "claude-chat-view";
@@ -26,7 +26,7 @@ interface ChatMessage {
 }
 
 export class ClaudeChatView extends ItemView {
-	private plugin: ClaudeAssistantPlugin;
+	private plugin: VaultPensievePlugin;
 	private displayMessages: ChatMessage[] = [];
 	private apiMessages: MessageParam[] = [];
 	private messagesContainer: HTMLElement | null = null;
@@ -44,13 +44,13 @@ export class ClaudeChatView extends ItemView {
 	private historyIndex = -1;
 	private historyDraft = "";
 
-	constructor(leaf: WorkspaceLeaf, plugin: ClaudeAssistantPlugin) {
+	constructor(leaf: WorkspaceLeaf, plugin: VaultPensievePlugin) {
 		super(leaf);
 		this.plugin = plugin;
 	}
 
 	getViewType(): string { return CHAT_VIEW_TYPE; }
-	getDisplayText(): string { return "Claude chat"; }
+	getDisplayText(): string { return "VaultPensieve"; }
 	getIcon(): string { return "message-square"; }
 
 	onOpen() {
@@ -61,7 +61,7 @@ export class ClaudeChatView extends ItemView {
 		// ── Header ──────────────────────────────────────────────
 		const header = container.createDiv({ cls: "claude-chat-header" });
 		const titleRow = header.createDiv({ cls: "claude-chat-title-row" });
-		titleRow.createSpan({ cls: "claude-chat-title", text: "Claude" });
+		titleRow.createSpan({ cls: "claude-chat-title", text: "VaultPensieve" });
 
 		const headerActions = titleRow.createDiv({ cls: "claude-chat-header-actions" });
 
@@ -92,12 +92,12 @@ export class ClaudeChatView extends ItemView {
 		// Settings button
 		const settingsBtn = headerActions.createEl("button", {
 			cls: "claude-icon-btn",
-			attr: { title: "Claude assistant settings" },
+			attr: { title: "VaultPensieve settings" },
 		});
 		setIcon(settingsBtn, "settings");
 		settingsBtn.addEventListener("click", () => {
 			(this.app as AppWithSetting).setting.open();
-			(this.app as AppWithSetting).setting.openTabById("claude-assistant");
+			(this.app as AppWithSetting).setting.openTabById("vault-pensieve");
 		});
 
 		// Clear button
@@ -336,7 +336,7 @@ export class ClaudeChatView extends ItemView {
 		if (this.displayMessages.length === 0) {
 			const empty = this.messagesContainer.createDiv({ cls: "claude-chat-empty" });
 			empty.createDiv({ cls: "claude-chat-empty-icon", text: "✦" });
-			empty.createDiv({ cls: "claude-chat-empty-text", text: "Ask Claude anything about your vault" });
+			empty.createDiv({ cls: "claude-chat-empty-text", text: "Ask anything about your vault" });
 			return;
 		}
 

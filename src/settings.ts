@@ -1,10 +1,10 @@
 import type { App} from "obsidian";
 import { Notice, PluginSettingTab, Setting } from "obsidian";
-import type ClaudeAssistantPlugin from "./main";
+import type VaultPensievePlugin from "./main";
 
 export type AIProvider = "anthropic" | "ollama";
 
-export interface ClaudeAssistantSettings {
+export interface VaultPensieveSettings {
 	provider: AIProvider;
 	apiKey: string;
 	model: string;
@@ -16,7 +16,7 @@ export interface ClaudeAssistantSettings {
 	usageDollars: number;        // accumulated spend this month
 }
 
-export const DEFAULT_SETTINGS: ClaudeAssistantSettings = {
+export const DEFAULT_SETTINGS: VaultPensieveSettings = {
 	provider: "anthropic",
 	apiKey: "",
 	model: "claude-sonnet-4-6",
@@ -33,10 +33,10 @@ const AVAILABLE_MODELS = [
 	{ value: "claude-haiku-4-5", label: "Claude Haiku 4.5" },
 ];
 
-export class ClaudeSettingTab extends PluginSettingTab {
-	plugin: ClaudeAssistantPlugin;
+export class VaultPensieveSettingTab extends PluginSettingTab {
+	plugin: VaultPensievePlugin;
 
-	constructor(app: App, plugin: ClaudeAssistantPlugin) {
+	constructor(app: App, plugin: VaultPensievePlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}

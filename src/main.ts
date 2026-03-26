@@ -6,9 +6,9 @@ const MODEL_COSTS: Record<string, { input: number; output: number }> = {
 	"claude-haiku-4-5":  { input: 1.0 / 1_000_000, output: 5.0 / 1_000_000 },
 };
 import type {
-	ClaudeAssistantSettings} from "./settings";
+	VaultPensieveSettings} from "./settings";
 import {
-	ClaudeSettingTab,
+	VaultPensieveSettingTab,
 	DEFAULT_SETTINGS,
 } from "./settings";
 import type { AIClient } from "./claude-client";
@@ -20,8 +20,8 @@ import { continueWriting } from "./commands/continue-writing";
 import { summarizeNote } from "./commands/summarize-note";
 import { improveRewrite } from "./commands/improve-rewrite";
 
-export default class ClaudeAssistantPlugin extends Plugin {
-	settings: ClaudeAssistantSettings = DEFAULT_SETTINGS;
+export default class VaultPensievePlugin extends Plugin {
+	settings: VaultPensieveSettings = DEFAULT_SETTINGS;
 	private client: AIClient | null = null;
 	vaultInstructions: VaultInstructions | null = null;
 	private structureUpdateTimer: number | null = null;
@@ -30,20 +30,20 @@ export default class ClaudeAssistantPlugin extends Plugin {
 		await this.loadSettings();
 		this.vaultInstructions = new VaultInstructions(this.app);
 
-		this.addSettingTab(new ClaudeSettingTab(this.app, this));
+		this.addSettingTab(new VaultPensieveSettingTab(this.app, this));
 
 		// Register chat sidebar view
 		this.registerView(CHAT_VIEW_TYPE, (leaf) => new ClaudeChatView(leaf, this));
 
 		// Ribbon icon to open chat
-		this.addRibbonIcon("message-square", "Open claude chat", () => {
+		this.addRibbonIcon("message-square", "Open VaultPensieve", () => {
 			void this.activateChatView();
 		});
 
 		// Command: open chat
 		this.addCommand({
 			id: "open-chat",
-			name: "Open claude chat",
+			name: "Open VaultPensieve",
 			callback: () => this.activateChatView(),
 		});
 

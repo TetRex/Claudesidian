@@ -1,7 +1,7 @@
 {
-	"name": "claudesidian",
+	"name": "vault-pensieve",
 	"version": "1.0.0",
-	"description": "Claude AI writing assistant for Obsidian",
+	"description": "AI writing assistant for Obsidian",
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",

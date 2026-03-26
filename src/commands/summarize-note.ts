@@ -1,10 +1,10 @@
 import type { Editor} from "obsidian";
 import { Notice } from "obsidian";
-import type ClaudeAssistantPlugin from "../main";
+import type VaultPensievePlugin from "../main";
 import { PreviewModal } from "../preview-modal";
 
 export async function summarizeNote(
-	plugin: ClaudeAssistantPlugin,
+	plugin: VaultPensievePlugin,
 	editor: Editor
 ): Promise<void> {
 	const fullText = editor.getValue();
