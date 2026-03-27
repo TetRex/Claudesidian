@@ -69,7 +69,7 @@ Recommended models:
 | `gemma3:4b` | ~3.3 GB | Google's latest, good quality for the size |
 | `phi4-mini` | ~2.5 GB | Microsoft's small model, strong reasoning |
 
-Tool calling (reading/writing notes) requires a model that supports function calling. The models above are tested to work wll.
+Tool calling (reading/writing notes) requires a model that supports function calling. The models above are tested to work well.
 
 ---
 
