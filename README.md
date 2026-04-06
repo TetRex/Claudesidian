@@ -199,5 +199,4 @@ Usage recorded (Anthropic only: tokens → dollars, persisted monthly)
 ## Privacy & security
 
 - The API key is stored via Obsidian's plugin data (`data.json`) and is never logged or exposed
-- Note content is only sent to the AI when you explicitly attach a note or the AI calls a vault tool
 - When using Ollama, all data stays on your machine — nothing is sent to external servers
