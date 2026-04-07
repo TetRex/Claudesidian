@@ -3,7 +3,6 @@ import { Notice, PluginSettingTab, Setting } from "obsidian";
 import type VaultPensievePlugin from "./main";
 
 export type AIProvider = "anthropic" | "ollama";
-export type OllamaToolMode = "native" | "prompt";
 
 export interface VaultPensieveSettings {
 	provider: AIProvider;
@@ -11,7 +10,6 @@ export interface VaultPensieveSettings {
 	model: string;
 	ollamaBaseUrl: string;
 	ollamaModel: string;
-	ollamaToolMode: OllamaToolMode;
 	customSystemPrompt: string;
 	monthlyLimitDollars: number; // 0 = no limit (Anthropic only)
 	usageMonth: string;          // "2026-03"
@@ -24,7 +22,6 @@ export const DEFAULT_SETTINGS: VaultPensieveSettings = {
 	model: "claude-sonnet-4-6",
 	ollamaBaseUrl: "http://localhost:11434",
 	ollamaModel: "gemma4",
-	ollamaToolMode: "prompt",
 	customSystemPrompt: "",
 	monthlyLimitDollars: 0,
 	usageMonth: "",
@@ -187,23 +184,6 @@ export class VaultPensieveSettingTab extends PluginSettingTab {
 							})
 					);
 			}
-
-			new Setting(containerEl)
-				.setName("Tool calling mode")
-				.setDesc(
-					"\"Prompt-based\" works with all models by describing tools in the prompt. " +
-					"\"Native\" uses the API's built-in tool calling, which only some models support."
-				)
-				.addDropdown((dropdown) => {
-					dropdown.addOption("prompt", "Prompt-based (recommended)");
-					dropdown.addOption("native", "Native API tool calling");
-					dropdown
-						.setValue(this.plugin.settings.ollamaToolMode)
-						.onChange(async (value) => {
-							this.plugin.settings.ollamaToolMode = value as "native" | "prompt";
-							await this.plugin.saveSettings();
-						});
-				});
 
 		}
 

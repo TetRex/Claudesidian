@@ -1,6 +1,5 @@
 import type { MessageParam, ContentBlockParam, ToolResultBlockParam, TextBlockParam, ToolUseBlock } from "@anthropic-ai/sdk/resources/messages";
 import type { StreamCallbacks, ToolDefinition, ToolExecutor, AIClient } from "./claude-client";
-import type { OllamaToolMode } from "./settings";
 
 interface OAIToolCall {
 	id: string;
@@ -72,58 +71,13 @@ function anthropicToOAI(messages: MessageParam[]): OAIMessage[] {
 	return result;
 }
 
-/** Build a system-prompt section that describes available tools for prompt-based calling. */
-function buildToolPrompt(tools: ToolDefinition[]): string {
-	const toolDescs = tools.map(t => {
-		const params = t.input_schema as { properties?: Record<string, { type?: string; description?: string }>; required?: string[] };
-		const paramLines = Object.entries(params.properties ?? {}).map(([k, v]) => {
-			const req = (params.required ?? []).includes(k) ? " (required)" : " (optional)";
-			return `    - ${k}: ${v.description ?? v.type ?? "string"}${req}`;
-		});
-		return `- **${t.name}**: ${t.description}\n  Parameters:\n${paramLines.join("\n")}`;
-	}).join("\n\n");
-
-	return `\n\n## Available tools
-
-You can call tools by writing a <tool_call> tag with a JSON object inside. You may call multiple tools in one response.
-
-Format — each call must be EXACTLY:
-<tool_call>
-{"name": "tool_name", "arguments": {"param": "value"}}
-</tool_call>
-
-${toolDescs}
-
-IMPORTANT:
-- Always use <tool_call> tags when you need to interact with the vault.
-- You may include normal text before or after tool calls.
-- Wait for tool results before making assumptions about the outcome.`;
-}
-
-/** Parse <tool_call> blocks from model output text. Returns parsed calls and cleaned text. */
-function parseToolCalls(text: string): { cleanedText: string; calls: Array<{ name: string; arguments: Record<string, unknown> }> } {
-	const calls: Array<{ name: string; arguments: Record<string, unknown> }> = [];
-	const cleaned = text.replace(/<tool_call>\s*([\s\S]*?)\s*<\/tool_call>/g, (_match, json: string) => {
-		try {
-			const parsed = JSON.parse(json) as { name: string; arguments: Record<string, unknown> };
-			if (parsed.name) {
-				calls.push({ name: parsed.name, arguments: parsed.arguments ?? {} });
-			}
-		} catch { /* skip malformed calls */ }
-		return "";
-	});
-	return { cleanedText: cleaned.trim(), calls };
-}
-
 export class OllamaClient implements AIClient {
 	private baseUrl: string;
 	private model: string;
-	private toolMode: OllamaToolMode;
 
-	constructor(baseUrl: string, model: string, toolMode: OllamaToolMode = "prompt") {
+	constructor(baseUrl: string, model: string) {
 		this.baseUrl = baseUrl.replace(/\/$/, "");
 		this.model = model;
-		this.toolMode = toolMode;
 	}
 
 	async testConnection(): Promise<void> {
@@ -152,14 +106,8 @@ export class OllamaClient implements AIClient {
 		while (continueLoop) {
 			continueLoop = false;
 
-			const usePromptMode = this.toolMode === "prompt";
-
-			const effectiveSystemPrompt = (usePromptMode && tools && tools.length > 0)
-				? systemPrompt + buildToolPrompt(tools)
-				: systemPrompt;
-
 			const oaiMessages: OAIMessage[] = [
-				{ role: "system", content: effectiveSystemPrompt },
+				{ role: "system", content: systemPrompt },
 				...anthropicToOAI(allMessages),
 			];
 
@@ -169,7 +117,7 @@ export class OllamaClient implements AIClient {
 				stream: true,
 			};
 
-			if (!usePromptMode && tools && tools.length > 0) {
+			if (tools && tools.length > 0) {
 				requestBody.tools = tools.map(t => ({
 					type: "function",
 					function: {
@@ -261,36 +209,18 @@ export class OllamaClient implements AIClient {
 			const contentBlocks: ContentBlockParam[] = [];
 			const toolCalls: ToolUseBlock[] = [];
 
-			// In prompt mode, parse <tool_call> tags from the text output
-			if (usePromptMode && tools && tools.length > 0) {
-				const { cleanedText, calls } = parseToolCalls(fullText);
-				fullText = cleanedText;
+			for (const [, tc] of toolCallAccum) {
+				let input: Record<string, unknown> = {};
+				try { input = JSON.parse(tc.arguments); } catch { /* leave empty */ }
 
-				for (const call of calls) {
-					const block: ToolUseBlock = {
-						type: "tool_use",
-						id: `call_${Date.now()}_${Math.random().toString(36).slice(2)}`,
-						name: call.name,
-						input: call.arguments,
-					};
-					toolCalls.push(block);
-					contentBlocks.push(block);
-				}
-			} else {
-				// Native mode — use accumulated tool_calls from the stream
-				for (const [, tc] of toolCallAccum) {
-					let input: Record<string, unknown> = {};
-					try { input = JSON.parse(tc.arguments); } catch { /* leave empty */ }
-
-					const block: ToolUseBlock = {
-						type: "tool_use",
-						id: tc.id || `call_${Date.now()}_${Math.random().toString(36).slice(2)}`,
-						name: tc.name,
-						input,
-					};
-					toolCalls.push(block);
-					contentBlocks.push(block);
-				}
+				const block: ToolUseBlock = {
+					type: "tool_use",
+					id: tc.id || `call_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+					name: tc.name,
+					input,
+				};
+				toolCalls.push(block);
+				contentBlocks.push(block);
 			}
 
 			if (fullText) {
@@ -304,37 +234,19 @@ export class OllamaClient implements AIClient {
 			}
 
 			if (toolCalls.length > 0 && toolExecutor) {
-				if (usePromptMode) {
-					// In prompt mode, feed results back as plain text the model can understand
-					const resultParts: string[] = [];
-					for (const tc of toolCalls) {
-						try {
-							const result = await toolExecutor(tc.name, tc.input as Record<string, unknown>);
-							resultParts.push(`<tool_result name="${tc.name}">\n${result}\n</tool_result>`);
-						} catch (e) {
-							const errMsg = e instanceof Error ? e.message : "Tool execution failed";
-							resultParts.push(`<tool_result name="${tc.name}" error="true">\n${errMsg}\n</tool_result>`);
-						}
+				const toolResults: ToolResultBlockParam[] = [];
+				for (const tc of toolCalls) {
+					try {
+						const result = await toolExecutor(tc.name, tc.input as Record<string, unknown>);
+						toolResults.push({ type: "tool_result", tool_use_id: tc.id, content: result });
+					} catch (e) {
+						const errMsg = e instanceof Error ? e.message : "Tool execution failed";
+						toolResults.push({ type: "tool_result", tool_use_id: tc.id, content: errMsg, is_error: true });
 					}
-					const toolMsg: MessageParam = { role: "user", content: resultParts.join("\n\n") };
-					allMessages.push(toolMsg);
-					newMessages.push(toolMsg);
-				} else {
-					// Native mode — use standard tool_result format
-					const toolResults: ToolResultBlockParam[] = [];
-					for (const tc of toolCalls) {
-						try {
-							const result = await toolExecutor(tc.name, tc.input as Record<string, unknown>);
-							toolResults.push({ type: "tool_result", tool_use_id: tc.id, content: result });
-						} catch (e) {
-							const errMsg = e instanceof Error ? e.message : "Tool execution failed";
-							toolResults.push({ type: "tool_result", tool_use_id: tc.id, content: errMsg, is_error: true });
-						}
-					}
-					const toolMsg: MessageParam = { role: "user", content: toolResults };
-					allMessages.push(toolMsg);
-					newMessages.push(toolMsg);
 				}
+				const toolMsg: MessageParam = { role: "user", content: toolResults };
+				allMessages.push(toolMsg);
+				newMessages.push(toolMsg);
 				continueLoop = true;
 			}
 
