@@ -24,7 +24,7 @@ export const DEFAULT_SETTINGS: VaultPensieveSettings = {
 	apiKey: "",
 	model: "claude-sonnet-4-6",
 	ollamaBaseUrl: "http://localhost:11434",
-	ollamaModel: "llama3.2",
+	ollamaModel: "gemma4",
 	ollamaToolMode: "prompt",
 	customSystemPrompt: "",
 	monthlyLimitDollars: 0,
@@ -38,12 +38,7 @@ const AVAILABLE_MODELS = [
 ];
 
 const RECOMMENDED_OLLAMA_MODELS = [
-	{ name: "qwen2.5:7b",   size: "~4.7 GB", desc: "Best tool calling at 7B" },
-	{ name: "qwen2.5:3b",   size: "~2 GB",   desc: "Smallest with reliable tool calling" },
-	{ name: "llama3.2:3b",  size: "~2 GB",   desc: "Meta's small model, good instructions" },
-	{ name: "llama3.1:8b",  size: "~4.7 GB", desc: "Well-tested, reliable tool use" },
-	{ name: "gemma3:4b",    size: "~3.3 GB", desc: "Google's latest, good quality for the size" },
-	{ name: "phi4-mini",    size: "~2.5 GB", desc: "Microsoft's small model, strong reasoning" },
+	{ name: "gemma4",  size: "~5.5 GB", desc: "Google's latest, excellent quality and tool calling" },
 ];
 
 export class VaultPensieveSettingTab extends PluginSettingTab {
@@ -255,11 +250,11 @@ export class VaultPensieveSettingTab extends PluginSettingTab {
 					.setDesc("Could not fetch installed models — enter a name manually, or check the URL and click \"Refresh models\".")
 					.addText((text) =>
 						text
-							.setPlaceholder("llama3.2")
+							.setPlaceholder("gemma4")
 							.setValue(this.plugin.settings.ollamaModel)
 							.then((t) => t.inputEl.addClass("claude-setting-input-full"))
 							.onChange(async (value) => {
-								this.plugin.settings.ollamaModel = value.trim() || "llama3.2";
+								this.plugin.settings.ollamaModel = value.trim() || "gemma4";
 								await this.plugin.saveSettings();
 							})
 					);
