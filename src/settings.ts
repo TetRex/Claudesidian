@@ -56,6 +56,55 @@ export class VaultPensieveSettingTab extends PluginSettingTab {
 		}
 	}
 
+	private async assertOllamaToolCallingSupport(): Promise<string[]> {
+		let response: Response;
+		try {
+			response = await fetch(`${this.plugin.settings.ollamaBaseUrl}/api/show`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ model: this.plugin.settings.ollamaModel }),
+			});
+		} catch {
+			throw new Error(
+				`Cannot connect to Ollama at ${this.plugin.settings.ollamaBaseUrl}. Make sure Ollama is running.`
+			);
+		}
+
+		if (!response.ok) {
+			throw new Error(
+				`Connected to Ollama, but could not inspect model "${this.plugin.settings.ollamaModel}" (${response.status} ${response.statusText}).`
+			);
+		}
+
+		const data = await response.json() as { capabilities?: unknown };
+		const capabilities = Array.isArray(data.capabilities)
+			? data.capabilities.filter((value): value is string => typeof value === "string")
+			: [];
+
+		if (capabilities.length === 0) {
+			throw new Error(
+				`Connected to Ollama, but model "${this.plugin.settings.ollamaModel}" did not return any advertised capabilities.`
+			);
+		}
+
+		const normalizedCapabilities = capabilities.map(c => c.toLowerCase());
+		const supportsTools = normalizedCapabilities.some(capability =>
+			capability === "tools" ||
+			capability === "tool-calling" ||
+			capability === "tool_calling" ||
+			capability === "function-calling" ||
+			capability === "function_calling"
+		);
+
+		if (!supportsTools) {
+			throw new Error(
+				`Connected to Ollama, but model "${this.plugin.settings.ollamaModel}" does not advertise tool calling in /api/show. Capabilities: ${capabilities.join(", ")}.`
+			);
+		}
+
+		return capabilities;
+	}
+
 	private async renderAsync(): Promise<void> {
 		const isOllama = this.plugin.settings.provider === "ollama";
 
@@ -264,7 +313,14 @@ export class VaultPensieveSettingTab extends PluginSettingTab {
 					try {
 						const client = this.plugin.getClient();
 						await client.testConnection();
-						new Notice("Connection successful!");
+						if (isOllama) {
+							const capabilities = await this.assertOllamaToolCallingSupport();
+							new Notice(
+								`Connection successful! "${this.plugin.settings.ollamaModel}" supports tool calling (${capabilities.join(", ")}).`
+							);
+						} else {
+							new Notice("Connection successful!");
+						}
 					} catch (e) {
 						const msg =
 							e instanceof Error ? e.message : "Unknown error";
