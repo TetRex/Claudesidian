@@ -15,9 +15,16 @@ interface AppWithSetting extends App {
 	};
 }
 
-const MODELS = [
+const ANTHROPIC_MODELS = [
 	{ value: "claude-sonnet-4-6", label: "Sonnet 4.6" },
 	{ value: "claude-haiku-4-5", label: "Haiku 4.5" },
+];
+
+const OPENAI_MODELS = [
+	{ value: "gpt-5.4", label: "GPT-5.4" },
+	{ value: "gpt-5.4-mini", label: "GPT-5.4 mini" },
+	{ value: "gpt-5.4-nano", label: "GPT-5.4 nano" },
+	{ value: "gpt-5-mini", label: "GPT-5 mini" },
 ];
 
 interface ChatMessage {
@@ -79,24 +86,51 @@ export class ClaudeChatView extends ItemView {
 				attr: { selected: "true" },
 			});
 			void this.populateOllamaModels();
-		} else {
-			for (const m of MODELS) {
+		} else if (this.plugin.settings.provider === "anthropic") {
+			for (const m of ANTHROPIC_MODELS) {
 				const opt = this.modelSelect.createEl("option", { text: m.label, value: m.value });
 				if (m.value === this.plugin.settings.model) opt.selected = true;
 			}
+		} else if (this.plugin.settings.provider === "openai") {
+			for (const m of OPENAI_MODELS) {
+				const opt = this.modelSelect.createEl("option", { text: m.label, value: m.value });
+				if (m.value === this.plugin.settings.openaiModel) opt.selected = true;
+			}
+		} else {
+			this.modelSelect.createEl("option", {
+				text: this.plugin.settings.openrouterModel,
+				value: this.plugin.settings.openrouterModel,
+				attr: { selected: "true" },
+			});
 		}
 		this.modelSelect.addEventListener("change", () => void (async () => {
 			if (!this.modelSelect) return;
 			const modelValue = this.modelSelect.value;
-			if (this.plugin.settings.provider === "ollama") {
-				this.plugin.settings.ollamaModel = modelValue;
-				await this.plugin.saveSettings();
-				new Notice(`Switched to ${modelValue}`);
-			} else {
-				this.plugin.settings.model = modelValue;
-				await this.plugin.saveSettings();
-				const label = MODELS.find(m => m.value === modelValue)?.label;
-				new Notice(`Switched to ${label}`);
+			switch (this.plugin.settings.provider) {
+				case "ollama":
+					this.plugin.settings.ollamaModel = modelValue;
+					await this.plugin.saveSettings();
+					new Notice(`Switched to ${modelValue}`);
+					break;
+				case "anthropic": {
+					this.plugin.settings.model = modelValue;
+					await this.plugin.saveSettings();
+					const label = ANTHROPIC_MODELS.find(m => m.value === modelValue)?.label ?? modelValue;
+					new Notice(`Switched to ${label}`);
+					break;
+				}
+				case "openai": {
+					this.plugin.settings.openaiModel = modelValue;
+					await this.plugin.saveSettings();
+					const label = OPENAI_MODELS.find(m => m.value === modelValue)?.label ?? modelValue;
+					new Notice(`Switched to ${label}`);
+					break;
+				}
+				case "openrouter":
+					this.plugin.settings.openrouterModel = modelValue;
+					await this.plugin.saveSettings();
+					new Notice(`Switched to ${modelValue}`);
+					break;
 			}
 		})());
 
@@ -131,7 +165,7 @@ export class ClaudeChatView extends ItemView {
 
 		// ── Usage bar (Anthropic only) ───────────────────────────
 		const usageRow = header.createDiv({ cls: "claude-usage-row" });
-		if (this.plugin.settings.provider === "ollama") {
+		if (!this.plugin.supportsSpendTracking()) {
 			usageRow.addClass("hidden");
 		} else {
 			this.usageLabel = usageRow.createSpan({ cls: "claude-usage-label" });

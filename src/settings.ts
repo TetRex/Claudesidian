@@ -2,16 +2,20 @@ import type { App} from "obsidian";
 import { Notice, PluginSettingTab, Setting } from "obsidian";
 import type VaultPensievePlugin from "./main";
 
-export type AIProvider = "anthropic" | "ollama";
+export type AIProvider = "anthropic" | "openai" | "openrouter" | "ollama";
 
 export interface VaultPensieveSettings {
 	provider: AIProvider;
 	apiKey: string;
 	model: string;
+	openaiApiKey: string;
+	openaiModel: string;
+	openrouterApiKey: string;
+	openrouterModel: string;
 	ollamaBaseUrl: string;
 	ollamaModel: string;
 	customSystemPrompt: string;
-	monthlyLimitDollars: number; // 0 = no limit (Anthropic only)
+	monthlyLimitDollars: number; // 0 = no limit (tracked providers only)
 	usageMonth: string;          // "2026-03"
 	usageDollars: number;        // accumulated spend this month
 }
@@ -20,6 +24,10 @@ export const DEFAULT_SETTINGS: VaultPensieveSettings = {
 	provider: "anthropic",
 	apiKey: "",
 	model: "claude-sonnet-4-6",
+	openaiApiKey: "",
+	openaiModel: "gpt-5.4-mini",
+	openrouterApiKey: "",
+	openrouterModel: "openrouter/auto",
 	ollamaBaseUrl: "http://localhost:11434",
 	ollamaModel: "gemma4",
 	customSystemPrompt: "",
@@ -28,9 +36,16 @@ export const DEFAULT_SETTINGS: VaultPensieveSettings = {
 	usageDollars: 0,
 };
 
-const AVAILABLE_MODELS = [
+const ANTHROPIC_MODELS = [
 	{ value: "claude-sonnet-4-6", label: "Claude Sonnet 4.6" },
 	{ value: "claude-haiku-4-5", label: "Claude Haiku 4.5" },
+];
+
+const OPENAI_MODELS = [
+	{ value: "gpt-5.4", label: "GPT-5.4" },
+	{ value: "gpt-5.4-mini", label: "GPT-5.4 mini" },
+	{ value: "gpt-5.4-nano", label: "GPT-5.4 nano" },
+	{ value: "gpt-5-mini", label: "GPT-5 mini" },
 ];
 
 export class VaultPensieveSettingTab extends PluginSettingTab {
@@ -107,6 +122,9 @@ export class VaultPensieveSettingTab extends PluginSettingTab {
 
 	private async renderAsync(): Promise<void> {
 		const isOllama = this.plugin.settings.provider === "ollama";
+		const isAnthropic = this.plugin.settings.provider === "anthropic";
+		const isOpenAI = this.plugin.settings.provider === "openai";
+		const isOpenRouter = this.plugin.settings.provider === "openrouter";
 
 		// Fetch async data in parallel before rendering
 		const ollamaModels = isOllama ? await this.fetchOllamaModels() : [];
@@ -117,23 +135,25 @@ export class VaultPensieveSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("AI provider")
-			.setDesc("Use Anthropic's Claude API or a local Ollama instance.")
+			.setDesc("Use Anthropic, OpenAI, OpenRouter, or a local Ollama instance.")
 			.addDropdown((dropdown) => {
 				dropdown.addOption("anthropic", "Anthropic (Claude)");
+				dropdown.addOption("openai", "OpenAI");
+				dropdown.addOption("openrouter", "OpenRouter");
 				dropdown.addOption("ollama", "Ollama (local)");
 				dropdown
 					.setValue(this.plugin.settings.provider)
 					.onChange(async (value) => {
-						this.plugin.settings.provider = value as "anthropic" | "ollama";
+						this.plugin.settings.provider = value as AIProvider;
 						await this.plugin.saveSettings();
 						this.display();
 					});
 			});
 
-		if (!isOllama) {
+		if (isAnthropic) {
 			new Setting(containerEl)
 				.setName("API key")
-				.setDesc("Your api key stored locally in plugin data.")
+				.setDesc("Your Anthropic API key stored locally in plugin data.")
 				.addText((text) =>
 					text
 						.setPlaceholder("")
@@ -152,7 +172,7 @@ export class VaultPensieveSettingTab extends PluginSettingTab {
 				.setName("Model")
 				.setDesc("Which Claude model to use.")
 				.addDropdown((dropdown) => {
-					for (const m of AVAILABLE_MODELS) {
+					for (const m of ANTHROPIC_MODELS) {
 						dropdown.addOption(m.value, m.label);
 					}
 					dropdown
@@ -162,6 +182,69 @@ export class VaultPensieveSettingTab extends PluginSettingTab {
 							await this.plugin.saveSettings();
 						});
 				});
+		} else if (isOpenAI) {
+			new Setting(containerEl)
+				.setName("API key")
+				.setDesc("Your OpenAI API key stored locally in plugin data.")
+				.addText((text) =>
+					text
+						.setPlaceholder("")
+						.setValue(this.plugin.settings.openaiApiKey)
+						.then((t) => {
+							t.inputEl.type = "password";
+							t.inputEl.addClass("claude-setting-input-full");
+						})
+						.onChange(async (value) => {
+							this.plugin.settings.openaiApiKey = value.trim();
+							await this.plugin.saveSettings();
+						})
+				);
+
+			new Setting(containerEl)
+				.setName("Model")
+				.setDesc("Which OpenAI model to use.")
+				.addDropdown((dropdown) => {
+					for (const m of OPENAI_MODELS) {
+						dropdown.addOption(m.value, m.label);
+					}
+					dropdown
+						.setValue(this.plugin.settings.openaiModel)
+						.onChange(async (value) => {
+							this.plugin.settings.openaiModel = value;
+							await this.plugin.saveSettings();
+						});
+				});
+		} else if (isOpenRouter) {
+			new Setting(containerEl)
+				.setName("API key")
+				.setDesc("Your OpenRouter API key stored locally in plugin data.")
+				.addText((text) =>
+					text
+						.setPlaceholder("")
+						.setValue(this.plugin.settings.openrouterApiKey)
+						.then((t) => {
+							t.inputEl.type = "password";
+							t.inputEl.addClass("claude-setting-input-full");
+						})
+						.onChange(async (value) => {
+							this.plugin.settings.openrouterApiKey = value.trim();
+							await this.plugin.saveSettings();
+						})
+				);
+
+			new Setting(containerEl)
+				.setName("Model")
+				.setDesc("Any OpenRouter model id, for example openrouter/auto or openai/gpt-5.4-mini.")
+				.addText((text) =>
+					text
+						.setPlaceholder("openrouter/auto")
+						.setValue(this.plugin.settings.openrouterModel)
+						.then((t) => t.inputEl.addClass("claude-setting-input-full"))
+						.onChange(async (value) => {
+							this.plugin.settings.openrouterModel = value.trim() || "openrouter/auto";
+							await this.plugin.saveSettings();
+						})
+				);
 		} else {
 
 			if (ollamaModels.length > 0) {
@@ -223,10 +306,10 @@ export class VaultPensieveSettingTab extends PluginSettingTab {
 					})
 			);
 
-		if (!isOllama) {
+		if (this.plugin.supportsSpendTracking()) {
 			new Setting(containerEl)
 				.setName("Monthly spending limit")
-				.setDesc("Stop sending requests when this dollar amount is reached in a calendar month. Set to 0 for no limit.")
+				.setDesc("Stop sending requests when this estimated dollar amount is reached in a calendar month. Set to 0 for no limit.")
 				.addText((text) =>
 					text
 						.setPlaceholder("0")
@@ -268,11 +351,15 @@ export class VaultPensieveSettingTab extends PluginSettingTab {
 			.setDesc(
 				isOllama
 					? "Check that Ollama is reachable at the configured URL."
-					: "Send a test message to verify your API key works."
+					: "Send a test request to verify the configured provider works."
 			)
 			.addButton((button) =>
 				button.setButtonText("Test").onClick(async () => {
-					if (!isOllama && !this.plugin.settings.apiKey) {
+					const missingKey =
+						(isAnthropic && !this.plugin.settings.apiKey) ||
+						(isOpenAI && !this.plugin.settings.openaiApiKey) ||
+						(isOpenRouter && !this.plugin.settings.openrouterApiKey);
+					if (missingKey) {
 						new Notice("Please enter an API key first.");
 						return;
 					}
