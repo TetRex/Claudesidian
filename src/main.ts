@@ -17,7 +17,6 @@ import type { AIClient } from "./claude-client";
 import { ClaudeClient } from "./claude-client";
 import { OllamaClient } from "./ollama-client";
 import { ClaudeChatView, CHAT_VIEW_TYPE } from "./chat-view";
-import { VaultInstructions } from "./vault-instructions";
 import { continueWriting } from "./commands/continue-writing";
 import { summarizeNote } from "./commands/summarize-note";
 import { improveRewrite } from "./commands/improve-rewrite";
@@ -34,12 +33,9 @@ export default class VaultPensievePlugin extends Plugin {
 	settings: VaultPensieveSettings = DEFAULT_SETTINGS;
 	chats: SavedChat[] = [];
 	private client: AIClient | null = null;
-	vaultInstructions: VaultInstructions | null = null;
-	private structureUpdateTimer: number | null = null;
 
 	async onload() {
 		await this.loadSettings();
-		this.vaultInstructions = new VaultInstructions(this.app);
 
 		this.addSettingTab(new VaultPensieveSettingTab(this.app, this));
 
@@ -87,18 +83,6 @@ export default class VaultPensievePlugin extends Plugin {
 			}])
 		);
 
-		// Auto-update .structure.md on vault changes
-		const scheduleStructureUpdate = () => {
-			if (!this.settings.useInstructionFiles) return;
-			if (this.structureUpdateTimer !== null) window.clearTimeout(this.structureUpdateTimer);
-			this.structureUpdateTimer = window.setTimeout(() => {
-				this.structureUpdateTimer = null;
-				void this.vaultInstructions?.updateStructureFile();
-			}, 500);
-		};
-		this.registerEvent(this.app.vault.on("create", (f) => { if (!f.path.startsWith(".")) scheduleStructureUpdate(); }));
-		this.registerEvent(this.app.vault.on("delete", (f) => { if (!f.path.startsWith(".")) scheduleStructureUpdate(); }));
-		this.registerEvent(this.app.vault.on("rename", (f) => { if (!f.path.startsWith(".")) scheduleStructureUpdate(); }));
 	}
 
 	onunload() {
@@ -108,9 +92,6 @@ export default class VaultPensievePlugin extends Plugin {
 	async loadSettings() {
 		const data = (await this.loadData()) ?? {};
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, data);
-		if (typeof data.useInstructionFiles !== "boolean") {
-			this.settings.useInstructionFiles = await this.app.vault.adapter.exists(".instructions.md");
-		}
 		this.chats = Array.isArray(data.chats) ? data.chats : [];
 	}
 
@@ -227,17 +208,6 @@ Rules:
 - Only respond with text for conversation, explanations, or when no tool is needed.`
 			: "You are Claude, an AI assistant integrated into Obsidian. You help the user with writing, organizing, and managing their notes. You have access to vault tools to read and modify files when asked.";
 		const parts: string[] = [basePrompt];
-
-		// Load .instructions.md instructions
-		if (this.settings.useInstructionFiles && this.vaultInstructions) {
-			const activeFile = this.app.workspace.getActiveFile();
-			const instructions = await this.vaultInstructions.getInstructions(
-				activeFile?.path
-			);
-			if (instructions) {
-				parts.push("## User Instructions\n\n" + instructions);
-			}
-		}
 
 		// Custom system prompt from settings
 		if (this.settings.customSystemPrompt.trim()) {

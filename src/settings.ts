@@ -11,7 +11,6 @@ export interface VaultPensieveSettings {
 	ollamaBaseUrl: string;
 	ollamaModel: string;
 	customSystemPrompt: string;
-	useInstructionFiles: boolean;
 	monthlyLimitDollars: number; // 0 = no limit (Anthropic only)
 	usageMonth: string;          // "2026-03"
 	usageDollars: number;        // accumulated spend this month
@@ -24,7 +23,6 @@ export const DEFAULT_SETTINGS: VaultPensieveSettings = {
 	ollamaBaseUrl: "http://localhost:11434",
 	ollamaModel: "gemma4",
 	customSystemPrompt: "",
-	useInstructionFiles: false,
 	monthlyLimitDollars: 0,
 	usageMonth: "",
 	usageDollars: 0,
@@ -109,15 +107,9 @@ export class VaultPensieveSettingTab extends PluginSettingTab {
 
 	private async renderAsync(): Promise<void> {
 		const isOllama = this.plugin.settings.provider === "ollama";
-		const usesInstructionFiles = this.plugin.settings.useInstructionFiles;
 
 		// Fetch async data in parallel before rendering
-		const [instructionExists, ollamaModels] = await Promise.all([
-			usesInstructionFiles
-				? this.app.vault.adapter.exists(".instructions.md")
-				: Promise.resolve(false),
-			isOllama ? this.fetchOllamaModels() : Promise.resolve([] as string[]),
-		]);
+		const ollamaModels = isOllama ? await this.fetchOllamaModels() : [];
 
 		// Clear after the async work so concurrent calls don't produce duplicate settings
 		const { containerEl } = this;
@@ -230,50 +222,6 @@ export class VaultPensieveSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					})
 			);
-
-		new Setting(containerEl)
-			.setName("Use vault instruction files")
-			.setDesc(
-				"Optional advanced feature. Load .instructions.md files from the vault instead of relying on settings only."
-			)
-			.addToggle((toggle) =>
-				toggle
-					.setValue(usesInstructionFiles)
-					.onChange(async (value) => {
-						this.plugin.settings.useInstructionFiles = value;
-						await this.plugin.saveSettings();
-						this.display();
-					})
-			);
-
-		if (usesInstructionFiles) {
-			new Setting(containerEl)
-				.setName("Vault instruction files")
-				.setDesc(
-					instructionExists
-						? "The root .instructions.md file is enabled and will be added to the system prompt."
-						: "No .instructions.md found. Create one if you want file-based instructions and automatic .structure.md maintenance."
-				)
-				.addButton((btn) => {
-					if (instructionExists) {
-						btn.setButtonText("Delete .instructions.md").onClick(async () => {
-							await this.app.vault.adapter.remove(".instructions.md");
-							new Notice(".instructions.md deleted.");
-							this.display();
-						});
-					} else {
-						btn.setButtonText("Create .instructions.md").setCta().onClick(async () => {
-							const created = await this.plugin.vaultInstructions?.createStarterTemplate();
-							if (created) {
-								new Notice(".instructions.md and .structure.md created at vault root.");
-							} else {
-								new Notice(".instructions.md and .structure.md already exist.");
-							}
-							this.display();
-						});
-					}
-				});
-		}
 
 		if (!isOllama) {
 			new Setting(containerEl)
