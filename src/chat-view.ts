@@ -4,6 +4,7 @@ import type { MessageParam } from "@anthropic-ai/sdk/resources/messages";
 import type VaultPensievePlugin from "./main";
 import type { SavedChat } from "./main";
 import { VAULT_TOOLS, createToolExecutor } from "./vault-tools";
+import { ANTHROPIC_MODELS, OPENAI_MODELS, OPENROUTER_MODELS } from "./model-catalog";
 
 export const CHAT_VIEW_TYPE = "claude-chat-view";
 
@@ -14,18 +15,6 @@ interface AppWithSetting extends App {
 		openTabById(id: string): void;
 	};
 }
-
-const ANTHROPIC_MODELS = [
-	{ value: "claude-sonnet-4-6", label: "Sonnet 4.6" },
-	{ value: "claude-haiku-4-5", label: "Haiku 4.5" },
-];
-
-const OPENAI_MODELS = [
-	{ value: "gpt-5.4", label: "GPT-5.4" },
-	{ value: "gpt-5.4-mini", label: "GPT-5.4 mini" },
-	{ value: "gpt-5.4-nano", label: "GPT-5.4 nano" },
-	{ value: "gpt-5-mini", label: "GPT-5 mini" },
-];
 
 interface ChatMessage {
 	role: "user" | "assistant";
@@ -97,11 +86,17 @@ export class ClaudeChatView extends ItemView {
 				if (m.value === this.plugin.settings.openaiModel) opt.selected = true;
 			}
 		} else {
-			this.modelSelect.createEl("option", {
-				text: this.plugin.settings.openrouterModel,
-				value: this.plugin.settings.openrouterModel,
-				attr: { selected: "true" },
-			});
+			for (const m of OPENROUTER_MODELS) {
+				const opt = this.modelSelect.createEl("option", { text: m.label, value: m.value });
+				if (m.value === this.plugin.settings.openrouterModel) opt.selected = true;
+			}
+			if (!OPENROUTER_MODELS.some(m => m.value === this.plugin.settings.openrouterModel)) {
+				this.modelSelect.createEl("option", {
+					text: this.plugin.settings.openrouterModel,
+					value: this.plugin.settings.openrouterModel,
+					attr: { selected: "true" },
+				});
+			}
 		}
 		this.modelSelect.addEventListener("change", () => void (async () => {
 			if (!this.modelSelect) return;
