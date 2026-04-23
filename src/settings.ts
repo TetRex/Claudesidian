@@ -3,12 +3,12 @@ import { Notice, PluginSettingTab, Setting } from "obsidian";
 import type VaultPensievePlugin from "./main";
 import {
 	ANTHROPIC_MODELS,
+	GEMINI_MODELS,
 	OLLAMA_DEFAULT_MODEL,
 	OPENAI_MODELS,
-	OPENROUTER_MODELS,
 } from "./model-catalog";
 
-export type AIProvider = "anthropic" | "openai" | "openrouter" | "ollama";
+export type AIProvider = "anthropic" | "openai" | "gemini" | "ollama";
 
 export interface VaultPensieveSettings {
 	provider: AIProvider;
@@ -16,8 +16,8 @@ export interface VaultPensieveSettings {
 	model: string;
 	openaiApiKey: string;
 	openaiModel: string;
-	openrouterApiKey: string;
-	openrouterModel: string;
+	geminiApiKey: string;
+	geminiModel: string;
 	ollamaBaseUrl: string;
 	ollamaModel: string;
 	customSystemPrompt: string;
@@ -32,8 +32,8 @@ export const DEFAULT_SETTINGS: VaultPensieveSettings = {
 	model: "claude-sonnet-4-6",
 	openaiApiKey: "",
 	openaiModel: "gpt-5.4-mini",
-	openrouterApiKey: "",
-	openrouterModel: "openrouter/auto",
+	geminiApiKey: "",
+	geminiModel: "gemini-2.5-flash",
 	ollamaBaseUrl: "http://localhost:11434",
 	ollamaModel: OLLAMA_DEFAULT_MODEL,
 	customSystemPrompt: "",
@@ -118,7 +118,7 @@ export class VaultPensieveSettingTab extends PluginSettingTab {
 		const isOllama = this.plugin.settings.provider === "ollama";
 		const isAnthropic = this.plugin.settings.provider === "anthropic";
 		const isOpenAI = this.plugin.settings.provider === "openai";
-		const isOpenRouter = this.plugin.settings.provider === "openrouter";
+		const isGemini = this.plugin.settings.provider === "gemini";
 
 		// Fetch async data in parallel before rendering
 		const ollamaModels = isOllama ? await this.fetchOllamaModels() : [];
@@ -129,11 +129,11 @@ export class VaultPensieveSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("AI provider")
-			.setDesc("Use Anthropic, OpenAI, OpenRouter, or a local Ollama instance.")
+			.setDesc("Use Anthropic, OpenAI, Gemini, or a local Ollama instance.")
 			.addDropdown((dropdown) => {
 				dropdown.addOption("anthropic", "Anthropic (Claude)");
 				dropdown.addOption("openai", "OpenAI");
-				dropdown.addOption("openrouter", "OpenRouter");
+				dropdown.addOption("gemini", "Google Gemini");
 				dropdown.addOption("ollama", "Ollama (local)");
 				dropdown
 					.setValue(this.plugin.settings.provider)
@@ -208,41 +208,41 @@ export class VaultPensieveSettingTab extends PluginSettingTab {
 							await this.plugin.saveSettings();
 						});
 				});
-		} else if (isOpenRouter) {
+		} else if (isGemini) {
 			new Setting(containerEl)
 				.setName("API key")
-				.setDesc("Your OpenRouter API key stored locally in plugin data.")
+				.setDesc("Your Gemini API key stored locally in plugin data.")
 				.addText((text) =>
 					text
 						.setPlaceholder("")
-						.setValue(this.plugin.settings.openrouterApiKey)
+						.setValue(this.plugin.settings.geminiApiKey)
 						.then((t) => {
 							t.inputEl.type = "password";
 							t.inputEl.addClass("claude-setting-input-full");
 						})
 						.onChange(async (value) => {
-							this.plugin.settings.openrouterApiKey = value.trim();
+							this.plugin.settings.geminiApiKey = value.trim();
 							await this.plugin.saveSettings();
 						})
 				);
 
 			new Setting(containerEl)
 				.setName("Model")
-				.setDesc("Which OpenRouter model to use.")
+				.setDesc("Which Gemini model to use.")
 				.addDropdown((dropdown) => {
-					for (const m of OPENROUTER_MODELS) {
+					for (const m of GEMINI_MODELS) {
 						dropdown.addOption(m.value, m.label);
 					}
-					if (!OPENROUTER_MODELS.some(m => m.value === this.plugin.settings.openrouterModel)) {
+					if (!GEMINI_MODELS.some(m => m.value === this.plugin.settings.geminiModel)) {
 						dropdown.addOption(
-							this.plugin.settings.openrouterModel,
-							this.plugin.settings.openrouterModel
+							this.plugin.settings.geminiModel,
+							this.plugin.settings.geminiModel
 						);
 					}
 					dropdown
-						.setValue(this.plugin.settings.openrouterModel)
+						.setValue(this.plugin.settings.geminiModel)
 						.onChange(async (value) => {
-							this.plugin.settings.openrouterModel = value;
+							this.plugin.settings.geminiModel = value;
 							await this.plugin.saveSettings();
 						});
 				});
@@ -359,7 +359,7 @@ export class VaultPensieveSettingTab extends PluginSettingTab {
 					const missingKey =
 						(isAnthropic && !this.plugin.settings.apiKey) ||
 						(isOpenAI && !this.plugin.settings.openaiApiKey) ||
-						(isOpenRouter && !this.plugin.settings.openrouterApiKey);
+						(isGemini && !this.plugin.settings.geminiApiKey);
 					if (missingKey) {
 						new Notice("Please enter an API key first.");
 						return;
