@@ -8,12 +8,12 @@ import {
 	VaultPensieveSettingTab,
 	DEFAULT_SETTINGS,
 } from "./settings";
-import { LEGACY_MODEL_MIGRATIONS, MODEL_COSTS } from "./model-catalog";
+import { GEMINI_MODELS, LEGACY_MODEL_MIGRATIONS, MODEL_COSTS } from "./model-catalog";
 import type { AIClient } from "./claude-client";
 import { ClaudeClient } from "./claude-client";
+import { GeminiClient } from "./gemini-client";
 import { OllamaClient } from "./ollama-client";
 import { OpenAIClient } from "./openai-client";
-import { OpenRouterClient } from "./openrouter-client";
 import { ClaudeChatView, CHAT_VIEW_TYPE } from "./chat-view";
 import { continueWriting } from "./commands/continue-writing";
 import { summarizeNote } from "./commands/summarize-note";
@@ -90,12 +90,27 @@ export default class VaultPensievePlugin extends Plugin {
 	async loadSettings() {
 		const data = (await this.loadData()) ?? {};
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, data);
+		if (data.provider === "openrouter") {
+			this.settings.provider = "gemini";
+		}
+		if (typeof data.geminiApiKey !== "string" && typeof data.openrouterApiKey === "string") {
+			this.settings.geminiApiKey = data.openrouterApiKey;
+		}
+		if (typeof data.geminiModel !== "string" && typeof data.openrouterModel === "string") {
+			this.settings.geminiModel = data.openrouterModel;
+		}
 		this.settings.model =
 			LEGACY_MODEL_MIGRATIONS.anthropic?.[this.settings.model] ?? this.settings.model;
 		this.settings.openaiModel =
 			LEGACY_MODEL_MIGRATIONS.openai?.[this.settings.openaiModel] ?? this.settings.openaiModel;
-		this.settings.openrouterModel =
-			LEGACY_MODEL_MIGRATIONS.openrouter?.[this.settings.openrouterModel] ?? this.settings.openrouterModel;
+		this.settings.geminiModel =
+			LEGACY_MODEL_MIGRATIONS.gemini?.[this.settings.geminiModel] ?? this.settings.geminiModel;
+		if (
+			this.settings.provider === "gemini" &&
+			!GEMINI_MODELS.some((model) => model.value === this.settings.geminiModel)
+		) {
+			this.settings.geminiModel = DEFAULT_SETTINGS.geminiModel;
+		}
 		this.chats = Array.isArray(data.chats) ? data.chats : [];
 	}
 
@@ -135,8 +150,8 @@ export default class VaultPensievePlugin extends Plugin {
 				return this.settings.model;
 			case "openai":
 				return this.settings.openaiModel;
-			case "openrouter":
-				return this.settings.openrouterModel;
+			case "gemini":
+				return this.settings.geminiModel;
 			case "ollama":
 				return this.settings.ollamaModel;
 		}
@@ -218,15 +233,15 @@ export default class VaultPensievePlugin extends Plugin {
 						this.settings.openaiModel
 					);
 					break;
-				case "openrouter":
-					if (!this.settings.openrouterApiKey) {
+				case "gemini":
+					if (!this.settings.geminiApiKey) {
 						throw new Error(
-							"OpenRouter API key not configured. Please set it in plugin settings."
+							"Gemini API key not configured. Please set it in plugin settings."
 						);
 					}
-					this.client = new OpenRouterClient(
-						this.settings.openrouterApiKey,
-						this.settings.openrouterModel
+					this.client = new GeminiClient(
+						this.settings.geminiApiKey,
+						this.settings.geminiModel
 					);
 					break;
 				case "anthropic":
