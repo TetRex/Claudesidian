@@ -1,165 +1,129 @@
 # VaultPensieve
 
-An Obsidian plugin that integrates AI directly into your vault. Chat with Anthropic, OpenAI, Gemini, DeepSeek, or a local Ollama model in a sidebar, run writing commands on your notes, use inline fast answers, and let the AI read and modify your vault through tool calling.
+AI assistant for Obsidian with a chat sidebar, editor commands, inline answers, and vault-aware tool use.
 
----
+VaultPensieve lets you talk to Anthropic, OpenAI, Gemini, DeepSeek, or a local Ollama model directly inside your vault. It can read notes, search your vault, create or update files through tools, and help with drafting, rewriting, and summarizing without leaving Obsidian.
 
-## First start
+## Highlights
 
-### 1. Install the plugin
+- Chat sidebar with streaming responses, model switching, chat history, and note attachment
+- Writing commands for continue, summarize, and improve/rewrite flows
+- Inline fast answers with `:: question`
+- Vault tools for reading, searching, creating, and updating notes
+- Provider-level spend tracking for built-in Anthropic, OpenAI, Gemini, and DeepSeek models
+- Local Ollama support for private, on-device workflows
 
-Copy these three files into your vault's plugin folder:
+## Quick Start
 
-```
+### Install
+
+Copy these files into your vault plugin folder:
+
+```text
 <your-vault>/.obsidian/plugins/vault-pensieve/
   main.js
   manifest.json
   styles.css
 ```
 
-Then in Obsidian: **Settings → Community plugins → turn off Restricted mode → enable VaultPensieve**.
+Then in Obsidian:
 
-### 2. Choose a provider
+1. Open `Settings -> Community plugins`
+2. Turn off Restricted mode
+3. Enable `VaultPensieve`
 
-Open **Settings → VaultPensieve** and choose your AI provider.
+### Configure
 
----
+1. Open `Settings -> VaultPensieve`
+2. Choose a provider
+3. Add the provider API key, or configure Ollama locally
+4. Click `Test`
+5. Open `VaultPensieve` from the ribbon or command palette
 
-#### Option A — Anthropic (Claude)
+## Providers
 
-Paste your Anthropic API key into the **API key** field.
-Get a key at [console.anthropic.com](https://console.anthropic.com).
+### Anthropic
 
-Click **Test** to verify the connection.
+Get an API key at [console.anthropic.com](https://console.anthropic.com).
 
-The plugin currently exposes these Claude models:
-
-| Model | Speed | Cost |
-|---|---|---|
-| Claude Opus 4.6 | Moderate | $5 / $25 per 1M input/output tokens |
-| Claude Sonnet 4.6 | Fast | $3 / $15 per 1M input/output tokens |
-| Claude Haiku 4.5 | Fastest | $1 / $5 per 1M input/output tokens |
-
-You can switch Anthropic models directly from the chat sidebar at any time.
-
----
-
-#### Option B — OpenAI
-
-Paste your OpenAI API key into the **API key** field.
-
-Click **Test** to verify the connection.
-
-The plugin currently exposes these OpenAI models:
-
-| Model | Estimated cost used for tracking |
+| Model | Input / output cost per 1M tokens |
 |---|---|
-| GPT-5.5 | $5.00 / $30.00 per 1M input/output tokens |
-| GPT-5.4 mini | $0.75 / $4.50 per 1M input/output tokens |
-| GPT-5.4 nano | $0.20 / $1.25 per 1M input/output tokens |
+| Claude Opus 4.6 | $5.00 / $25.00 |
+| Claude Sonnet 4.6 | $3.00 / $15.00 |
+| Claude Haiku 4.5 | $1.00 / $5.00 |
 
-You can switch OpenAI models directly from the chat sidebar at any time.
+### OpenAI
 
----
-
-#### Option C — Gemini
-
-Paste your Gemini API key into the **API key** field.
-
-The plugin currently exposes these Gemini models:
-
-| Model | Estimated cost used for tracking |
+| Model | Input / output cost per 1M tokens |
 |---|---|
-| Gemini 2.5 Pro | $1.25 / $10.00 per 1M input/output tokens |
-| Gemini 2.5 Flash | $0.30 / $2.50 per 1M input/output tokens |
-| Gemini 2.5 Flash-Lite | $0.10 / $0.40 per 1M input/output tokens |
+| GPT-5.5 | $5.00 / $30.00 |
+| GPT-5.4 mini | $0.75 / $4.50 |
+| GPT-5.4 nano | $0.20 / $1.25 |
 
-Click **Test** to verify the connection.
+### Gemini
 
-You can switch Gemini models directly from the chat sidebar at any time.
-
----
-
-#### Option D — DeepSeek
-
-Paste your DeepSeek API key into the **API key** field.
-
-The plugin currently exposes these DeepSeek models:
-
-| Model | Estimated cost used for tracking |
+| Model | Input / output cost per 1M tokens |
 |---|---|
-| DeepSeek V4 Flash | $0.14 / $0.28 per 1M input/output tokens |
-| DeepSeek V4 Pro | $1.74 / $3.48 per 1M input/output tokens |
+| Gemini 2.5 Pro | $1.25 / $10.00 |
+| Gemini 2.5 Flash | $0.30 / $2.50 |
+| Gemini 2.5 Flash-Lite | $0.10 / $0.40 |
 
-You can switch DeepSeek models directly from the chat sidebar at any time.
+### DeepSeek
 
----
+| Model | Input / output cost per 1M tokens |
+|---|---|
+| DeepSeek V4 Flash | $0.14 / $0.28 |
+| DeepSeek V4 Pro | $1.74 / $3.48 |
 
-#### Option E — Ollama (local, free)
+### Ollama
 
-Ollama runs AI models on your own machine. No API key or internet connection required.
+Ollama runs locally and does not require an API key.
 
-1. [Download and install Ollama](https://ollama.com/download) for your OS.
-2. Launch Ollama and pull the recommended model: `ollama pull qwen3.6`
-3. Click **Test** in settings to confirm Ollama is reachable and that the selected model advertises tool calling support.
+1. Install [Ollama](https://ollama.com/download)
+2. Pull the default model:
 
-The plugin expects Ollama at `http://localhost:11434`. The default model is `qwen3.6`. If the plugin can reach Ollama, installed models appear in a dropdown. If not, you can enter a model name manually. Tool calling requires a model that supports native tool or function calling.
+```bash
+ollama pull qwen3.6
+```
 
----
+3. Keep Ollama running at `http://localhost:11434`
+4. Click `Test` in plugin settings
 
-### 3. Customize assistant behavior (optional)
-
-Use **Custom system prompt** in **Settings → VaultPensieve** to add instructions that should apply to every request.
-
-This is the primary place to define tone, formatting preferences, writing constraints, or vault-specific behavior.
-
-### 4. Set a spending limit (optional)
-
-In **Settings → VaultPensieve**, set a **Monthly spending limit** in dollars. Requests will be blocked once the limit is reached. The counter resets automatically on the first of each month.
-
-Spend tracking is available for Anthropic, OpenAI, Gemini, and DeepSeek models in the built-in lists. It is not currently tracked for Ollama.
-
----
+VaultPensieve uses `qwen3.6` as the default Ollama model. If the plugin can reach Ollama, installed models appear in a dropdown. If not, you can type a model name manually.
 
 ## Features
 
-### Chat sidebar
+### Chat Sidebar
 
-Open the chat panel from the ribbon icon or via **Command Palette → Open VaultPensieve**.
+Open the chat panel from the ribbon icon or via `Command Palette -> Open VaultPensieve`.
 
-- **Model switcher** — change models without leaving the chat. Anthropic, OpenAI, Gemini, and DeepSeek use built-in model lists. Ollama shows installed models when reachable
-- **Attach note** — click the paperclip to attach the currently open note as context. The note name appears as a chip; click × to detach before sending
-- **Chat history** — clock icon shows all saved conversations. Click any entry to resume it; × to delete
-- **New chat** — plus icon starts a fresh conversation (current chat is saved automatically)
-- **Prompt history** — press ↑/↓ in the input box to navigate previously sent messages
-- **Usage bar** — shows current monthly spend vs your limit for providers/models with spend tracking. Turns red when the limit is reached
-- **Token count** — each response shows the output token count at the bottom of the bubble
-- **Settings shortcut** — gear icon opens the settings page directly
+- Model switcher in the header
+- Streaming assistant responses
+- Attach current note as context
+- Saved chat history with resume and delete
+- New chat action
+- Prompt history with up/down keys
+- Monthly usage bar for tracked providers
+- Output token count per response
+- Settings shortcut from the header
 
-Messages support full Markdown rendering — headings, bold, code blocks, lists, and links all display correctly.
+Messages render as Markdown, including headings, lists, links, and code blocks.
 
-The AI uses vault tools silently in the background. A notice appears whenever a file is created or modified.
+### Writing Commands
 
-### Writing commands
+Available from the command palette:
 
-Three writing commands are available via the Command Palette (`Cmd/Ctrl+P`):
-
-| Command | What it does |
+| Command | Behavior |
 |---|---|
-| **Continue writing** | Takes text before the cursor and streams a continuation |
-| **Summarize note** | Summarizes the full content of the current note |
-| **Improve / rewrite selection** | Rewrites the selected text while preserving its meaning |
+| Continue writing | Streams a continuation from the text before the cursor |
+| Summarize note | Summarizes the current note |
+| Improve / rewrite selection | Rewrites the selected text while keeping intent |
 
-All three commands open a **preview modal** before applying any changes:
-- The original text is shown on top
-- The suggestion streams in below in real time
-- **Accept** — applies the change to the editor
-- **Retry** — generates a new suggestion
-- **Cancel** — discards and closes
+Each command opens a preview modal before applying changes. You can accept, retry, or cancel.
 
-### Fast answer
+### Fast Answer
 
-Type a line that starts with `::` inside a note, for example:
+Type a line that starts with `::`, for example:
 
 ```md
 :: what are the main themes of this note?
@@ -167,67 +131,99 @@ Type a line that starts with `::` inside a note, for example:
 
 Press `Enter` and VaultPensieve replaces that line with a formatted inline Q/A block while the answer streams into the note.
 
-### Vault tools (agentic loop)
+### Vault Tools
 
-When asked, the AI can interact with your vault directly:
+The assistant can use these tools when appropriate:
 
-| Tool | What it does |
+| Tool | Purpose |
 |---|---|
-| `list_files` | Lists files in a folder |
-| `read_note` | Reads the full content of a note |
-| `create_note` | Creates a new note with given content |
-| `update_note` | Replaces the content of an existing note |
-| `search_notes` | Full-text search across all notes |
-| `get_vault_structure` | Returns the folder tree |
+| `list_files` | List files in a folder |
+| `read_note` | Read a note |
+| `create_note` | Create a note with content |
+| `update_note` | Replace note content |
+| `search_notes` | Full-text search across notes |
+| `get_vault_structure` | Return the folder tree |
 
-## How it works
+When a tool changes the vault, the plugin shows an Obsidian notice.
 
-```
-User message
-    │
-    ▼
-Build system prompt
-  ├─ Base instructions
-  └─ Custom system prompt (from settings)
-    │
-    ▼
-AI provider (streaming)
-  ├─ Anthropic API
-  ├─ OpenAI API
-  ├─ Gemini API
-  ├─ DeepSeek API
-  └─ Ollama (/v1/chat/completions)
-    │
-    ├─ Text chunks → displayed incrementally in the chat bubble
-    │
-    └─ Tool calls (if any)
-         ├─ Execute against app.vault
-         ├─ Show Obsidian Notice
-         └─ Feed result back → loop until no more tool calls
-    │
-    ▼
-Usage recorded (supported priced models only: tokens → estimated dollars, persisted monthly)
-```
-
----
-
-## Settings reference
+## Settings
 
 | Setting | Description |
 |---|---|
 | AI provider | Anthropic, OpenAI, Gemini, DeepSeek, or Ollama |
-| API key | Provider-specific API key for Anthropic, OpenAI, Gemini, or DeepSeek. Stored in plugin data, never logged |
-| Model | Claude model, OpenAI model, Gemini model, or DeepSeek model depending on the selected provider |
-| Ollama model | Select from models installed in Ollama, or enter a name manually |
+| API key | Provider-specific key for Anthropic, OpenAI, Gemini, or DeepSeek |
+| Model | Provider model selection for the active provider |
+| Ollama model | Installed model dropdown or manual model name |
 | Custom system prompt | Extra instructions appended to every request |
-| Monthly spending limit | Block requests above this dollar amount — 0 = no limit (supported tracked models only) |
-| Current usage | Estimated dollars spent this calendar month when tracking is available |
-| Test connection | Verify your API key or Ollama connection |
+| Monthly spending limit | Estimated monthly cap in dollars, `0` disables the limit |
+| Current usage | Estimated monthly spend for tracked providers |
+| Test connection | Verifies the current provider configuration |
 
----
+## Spending Limits
 
-## Privacy & security
+Spend tracking is available for the built-in Anthropic, OpenAI, Gemini, and DeepSeek model lists. Ollama is not tracked.
 
-- API keys are stored via Obsidian's plugin data (`data.json`) and are never logged by the plugin
-- When using Ollama, note content stays on your machine unless your Ollama server is remote
-- When using Anthropic, OpenAI, Gemini, or DeepSeek, the request content needed for chat or commands is sent to the selected provider
+You can set a monthly dollar limit in settings. Once the limit is reached, VaultPensieve blocks further requests until the next calendar month.
+
+## How It Works
+
+```text
+User input
+  -> system prompt assembly
+  -> selected provider API
+  -> streamed text and optional tool calls
+  -> tool execution against the vault
+  -> updated response stream
+  -> usage accounting for tracked models
+```
+
+The non-Anthropic providers use an OpenAI-compatible chat completions flow. Anthropic uses the Claude SDK directly.
+
+## Privacy
+
+- API keys are stored in Obsidian plugin data (`data.json`)
+- API keys are not logged by the plugin
+- Ollama content stays local unless your Ollama server is remote
+- Anthropic, OpenAI, Gemini, and DeepSeek requests send the required note content and prompts to the selected provider
+
+## Development
+
+### Commands
+
+```bash
+npm install
+npm run dev
+npm run lint
+npm run build
+```
+
+### Local Validation
+
+Minimum validation before shipping:
+
+```bash
+npm run lint
+npm run build
+```
+
+Then load the plugin in:
+
+```text
+.obsidian/plugins/vault-pensieve/
+```
+
+Recommended manual checks:
+
+- Provider setup and test connection flows
+- Chat sidebar behavior
+- Model switching
+- Saved chat history
+- Vault tool execution notices
+- Writing command preview flows
+- `::` fast answer behavior
+
+## Notes
+
+- Custom system prompt is the main place to define tone, formatting, and vault-specific instructions
+- Legacy saved provider model values are migrated forward when possible
+- DeepSeek legacy `deepseek-chat` and `deepseek-reasoner` values map to the current DeepSeek V4 model list
